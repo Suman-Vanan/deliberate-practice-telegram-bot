@@ -139,7 +139,8 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
         Session session = new Session();
         session.setStart(startDateTime);
         session.setEnd(endDateTime);
-        session.setActivitiesCompleted(activitiesCompleted);
+        if (!activitiesCompleted.isEmpty())
+            session.setActivitiesCompleted(activitiesCompleted.trim());
         session.setUser(telegramUser);
         return session;
     }
