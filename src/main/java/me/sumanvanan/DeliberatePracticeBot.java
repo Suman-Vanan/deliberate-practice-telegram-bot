@@ -30,13 +30,14 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
         this.activeUsers = new HashMap<>();
     }
 
+    @Override
     public void onUpdateReceived(Update update) {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
 
             Message receivedMessage = update.getMessage();
             String text = receivedMessage.getText();
-            String reply = null;
+            String reply = "";
 
             if (text.startsWith(HELP)) {
                 reply = handleHelp();
@@ -57,7 +58,11 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
             } else if (text.startsWith(PAY_FINE)) {
                 payFine(receivedMessage);
                 reply = handlePayFine();
+            } else if (text.startsWith("/")) {
+                reply = "Sorry, I couldn't understand your command. Please try '/help' to see available commands.";
             }
+
+            if (reply.isEmpty()) return;
 
             SendMessage sendMessage = new SendMessage() // Create a SendMessage object with mandatory fields
                     .setChatId(receivedMessage.getChatId())
@@ -218,11 +223,12 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
 
     private static EntityManager openEntityManager() {
         if (entityManagerFactory == null) {
-            entityManagerFactory = Persistence.createEntityManagerFactory("Demo");
+            entityManagerFactory = Persistence.createEntityManagerFactory("test-persistence-unit");
         }
         return entityManagerFactory.createEntityManager();
     }
 
+    @Override
     public String getBotUsername() {
         return "deliberate_practice_test_bot";
     }
