@@ -1,3 +1,26 @@
+### Building and running locally
+
+- Set the `BOT_FATHER_HTTP_API_TOKEN` environment variable
+- Clone this repo then set your DB properties in `hibernate.properties`
+- To build, run `mvn package`
+- To run the bot, use 
+`java -cp target/deliberate-practice-bot-1.0-SNAPSHOT-jar-with-dependencies.jar me.sumanvanan.Main`
+
+
+### Deployment
+
+- [ ] Setup continous deployment pipeline
+
+Currently, I manually deployed on my EC2 instance. 
+
+- SSH to EC2 instance
+- Clone the source code from this repo
+- Build
+- Use `tmux` to start the main method, then detach from the tmux session to leave 
+the unix process running after logging out
+
+##Design decisions
+
 ### Do I need a DAO?
 
 - https://stackoverflow.com/questions/15554826/new-to-java-whats-jpa-and-dao
