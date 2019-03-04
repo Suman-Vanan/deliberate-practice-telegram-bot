@@ -106,12 +106,12 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
 
         String[] headers = { "Command", "Description" };
         String[][] data = {
-                { "/start", "heck in a new session" },
-                { "/end", "End the currently checked in session" },
-                { "/status", "See which users are currently checked in" },
-                { "/cheatday", "Use your cheat day (no validation added yet)" },
-                { "/payfine", "Add $2 to your outstanding fine" },
-                { "/users", "List all users and their data" },
+                { "/start", "Check in\na new\nsession" },
+                { "/end", "End the\ncurrently checked\nin session" },
+                { "/status", "See which\nusers are\ncurrently\nchecked in" },
+                { "/cheatday", "Use your\ncheat day\n(no validation\nadded yet)" },
+                { "/payfine", "Add $2 to\nyour outstanding\nfine" },
+                { "/users", "List all\nusers and\ntheir data" },
         };
 
         return "You can use the following commands:\n" + FlipTable.of(headers, data);
