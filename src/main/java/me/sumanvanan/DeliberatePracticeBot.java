@@ -1,5 +1,6 @@
 package me.sumanvanan;
 
+import com.jakewharton.fliptables.FlipTable;
 import me.sumanvanan.entity.Session;
 import me.sumanvanan.entity.TelegramUser;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -7,17 +8,25 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiValidationException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static me.sumanvanan.BotCommands.*;
 
@@ -37,36 +46,39 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
 
             Message receivedMessage = update.getMessage();
             String text = receivedMessage.getText();
-            String reply = "";
+            AtomicReference<String> reply = new AtomicReference<>("");
 
             if (text.startsWith(HELP)) {
-                reply = handleHelp();
+                reply.set(handleHelp());
             } else if (text.startsWith(START)) {
                 TelegramUser user = insertUserIfNeeded(receivedMessage.getFrom());
                 startSession(receivedMessage, user);
-                reply = handleStart(receivedMessage);
+                reply.set(handleStart(receivedMessage));
             } else if (text.startsWith(END)) {
                 Session session = endSession(receivedMessage);
                 insertSession(session);
-                reply = handleStop(session);
+                reply.set(handleStop(session));
             } else if (text.startsWith(STATUS)) {
-                reply = handleStatus();
+                reply.set(handleStatus());
             } else if (text.startsWith(CHEAT_DAY)) {
                 Session session = createCheatDaySession(receivedMessage);
                 insertSession(session);
-                reply = handleCheatDay();
+                reply.set(handleCheatDay());
             } else if (text.startsWith(PAY_FINE)) {
                 payFine(receivedMessage);
-                reply = handlePayFine();
+                reply.set(handlePayFine());
+            } else if (text.startsWith(USERS)) {
+                reply.set(handleUsers());
             } else if (text.startsWith("/")) {
-                reply = "Sorry, I couldn't understand your command. Please try '/help' to see available commands.";
+                reply.set("Sorry, I couldn't understand your command. Please try '/help' to see available commands.");
             }
 
-            if (reply.isEmpty()) return;
+            if (reply.get().isEmpty()) return;
 
             SendMessage sendMessage = new SendMessage() // Create a SendMessage object with mandatory fields
                     .setChatId(receivedMessage.getChatId())
-                    .setText(reply);
+                    .enableMarkdown(true)
+                    .setText("```\n" + reply.get() + "```");
 
             try {
                 execute(sendMessage); // Call method to send the message
@@ -76,13 +88,35 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
         }
     }
 
+    private String handleUsers() {
+        List<TelegramUser> users = getAllUsers();
+
+        String[] headers = { "Name", "Fine" };
+        String[][] data = new String[users.size()][2];
+        for (int i = 0; i < users.size(); i++) {
+            String[] row = new String[2];
+            TelegramUser user = users.get(i);
+            row[0] = user.getFirstName();
+            row[1] = "$" + user.getFine();
+            data[i] = row;
+        }
+
+        return FlipTable.of(headers, data);
+    }
+
     private String handleHelp() {
-        return "You can use the following commands\n" +
-                "/start - Check in a new session\n" +
-                "/end - End the currently checked in session\n" +
-                "/status - See which users are currently checked in\n" +
-                "/cheatday - Use your cheat day\n" +
-                "/payfine - Add $2 to your outstanding fine";
+
+        String[] headers = { "Command", "Description" };
+        String[][] data = {
+                { "/start", "heck in a new session" },
+                { "/end", "End the currently checked in session" },
+                { "/status", "See which users are currently checked in" },
+                { "/cheatday", "Use your cheat day (no validation added yet)" },
+                { "/payfine", "Add $2 to your outstanding fine" },
+                { "/users", "List all users and their data" },
+        };
+
+        return "You can use the following commands:\n" + FlipTable.of(headers, data);
     }
 
     private String handlePayFine() {
@@ -191,6 +225,18 @@ public class DeliberatePracticeBot extends TelegramLongPollingBot {
                 .substring(2)
                 .replaceAll("(\\d[HMS])(?!$)", "$1 ")
                 .toLowerCase();
+    }
+
+    private static List<TelegramUser> getAllUsers() {
+        EntityManager entityManager = openEntityManager();
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<TelegramUser> criteriaQuery = criteriaBuilder.createQuery(TelegramUser.class);
+        Root<TelegramUser> userRoot = criteriaQuery.from(TelegramUser.class);
+        CriteriaQuery<TelegramUser> all = criteriaQuery.select(userRoot);
+        TypedQuery<TelegramUser> allQuery = entityManager.createQuery(all);
+        List<TelegramUser> users = allQuery.getResultList();
+        entityManager.close();
+        return users;
     }
 
     private static TelegramUser getUser(Integer id) {
